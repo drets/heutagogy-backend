@@ -184,6 +184,60 @@ class BookmarkContent(Resource):
         return {'html': bookmark.content_html, 'text': bookmark.content_text}
 
 
-api.add_resource(Bookmarks,       '/api/v1/bookmarks')
-api.add_resource(Bookmark,        '/api/v1/bookmarks/<int:id>')
-api.add_resource(BookmarkContent, '/api/v1/bookmarks/<int:id>/content')
+class BookmarkHighlightings(Resource):
+    @token_required
+    def get(self, id):
+        bookmark = db.Bookmark.query \
+                              .filter_by(id=id, user=current_user.id) \
+                              .first()
+        if bookmark is None:
+            return {'error': 'Not found'}, HTTPStatus.NOT_FOUND
+
+        return list(map(lambda x: x.to_dict(), bookmark.highlightings)), HTTPStatus.OK
+
+    @token_required
+    def post(self, id):
+        update = request.get_json()
+
+        if isinstance(update, dict):
+            update = [update]
+
+        bookmark = db.Bookmark.query \
+                              .filter_by(id=id, user=current_user.id) \
+                              .first()
+
+        for entity in update:
+            if 'text' not in entity:
+                return {'error': 'text field is mandatory'}, \
+                    HTTPStatus.BAD_REQUEST
+
+            highlighting = db.Highlighting(text=entity['text'], user=current_user.id)
+            bookmark.highlightings.append(highlighting)
+
+        db.db.session.add(bookmark)
+        db.db.session.commit()
+
+        return list(map(lambda x: x.to_dict(), bookmark.highlightings)), HTTPStatus.OK
+
+
+class Highlighting(Resource):
+    @token_required
+    def delete(self, id):
+        highlighting = db.Highlighting.query \
+                              .filter_by(id=id, user=current_user.id) \
+                              .first()
+        if highlighting is None:
+            return {'error': 'Not found'}, HTTPStatus.NOT_FOUND
+
+        db.db.session.delete(highlighting)
+        db.db.session.commit()
+
+        return (), HTTPStatus.NO_CONTENT
+
+
+
+api.add_resource(Bookmarks,             '/api/v1/bookmarks')
+api.add_resource(Bookmark,              '/api/v1/bookmarks/<int:id>')
+api.add_resource(BookmarkContent,       '/api/v1/bookmarks/<int:id>/content')
+api.add_resource(BookmarkHighlightings, '/api/v1/bookmarks/<int:id>/highlightings')
+api.add_resource(Highlighting,          '/api/v1/highlighting/<int:id>')
