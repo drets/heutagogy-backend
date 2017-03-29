@@ -217,7 +217,7 @@ class BookmarkHighlightings(Resource):
         db.db.session.add(bookmark)
         db.db.session.commit()
 
-        return list(map(lambda x: x.to_dict(), bookmark.highlightings)), HTTPStatus.OK
+        return list(map(lambda x: x.to_dict(), bookmark.highlightings)),  HTTPStatus.CREATED
 
 
 class Highlighting(Resource):
@@ -235,9 +235,8 @@ class Highlighting(Resource):
         return (), HTTPStatus.NO_CONTENT
 
 
-
 api.add_resource(Bookmarks,             '/api/v1/bookmarks')
 api.add_resource(Bookmark,              '/api/v1/bookmarks/<int:id>')
 api.add_resource(BookmarkContent,       '/api/v1/bookmarks/<int:id>/content')
 api.add_resource(BookmarkHighlightings, '/api/v1/bookmarks/<int:id>/highlightings')
-api.add_resource(Highlighting,          '/api/v1/highlighting/<int:id>')
+api.add_resource(Highlighting,          '/api/v1/highlightings/<int:id>')

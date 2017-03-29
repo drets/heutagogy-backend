@@ -679,6 +679,78 @@ class HeutagogyTestCase(unittest.TestCase):
 
         self.assertTrue('Link' not in res.headers)
 
+    def create_dummy_bookmark(self, user):
+        return self.app.post(
+            '/api/v1/bookmarks',
+            content_type='application/json',
+            data=json.dumps({'url': 'https://github.com/',
+                             'title': 'Sample title'}),
+            headers=[user])
+
+    def create_dummy_highlightings(self, user, id):
+        return self.app.post(
+            '/api/v1/bookmarks/%r/highlightings' % id,
+            content_type='application/json',
+            data=json.dumps([{'text': 'Highlighting #1'},
+                             {'text': 'Highlighting #2'}]),
+            headers=[user])
+
+    @single_user
+    def test_post_highlightings(self):
+        bookmark_id = get_json(self.create_dummy_bookmark(self.user1))['id']
+        res = self.create_dummy_highlightings(self.user1, bookmark_id)
+        result = get_json(res)
+
+        self.assertEqual(HTTPStatus.CREATED, res.status_code)
+        self.assertEqual(result[0]['text'], 'Highlighting #1')
+        self.assertEqual(result[1]['text'], 'Highlighting #2')
+
+    @single_user
+    def test_get_highlightings(self):
+        bookmark_id = get_json(self.create_dummy_bookmark(self.user1))['id']
+        self.create_dummy_highlightings(self.user1, bookmark_id)
+
+        res = self.app.get('/api/v1/bookmarks/1/highlightings',
+                           headers=[self.user1])
+        result = get_json(res)
+
+        self.assertEqual(HTTPStatus.OK, res.status_code)
+        self.assertEqual(result[0]['text'], 'Highlighting #1')
+        self.assertEqual(result[1]['text'], 'Highlighting #2')
+
+    @multiple_users
+    def test_delete_highlightings(self):
+        # user1 creates bookmark with 2 highlightings
+        bookmark_id_1 = get_json(self.create_dummy_bookmark(self.user1))['id']
+        self.create_dummy_highlightings(self.user1, bookmark_id_1)
+
+        # user2 creates bookmark with 2 highlightings
+        bookmark_id_2 = get_json(self.create_dummy_bookmark(self.user2))['id']
+        self.create_dummy_highlightings(self.user2, bookmark_id_2)
+
+        # delete 3 highlightings
+        self.app.delete('/api/v1/highlightings/1',
+                           headers=[self.user1])
+        self.app.delete('/api/v1/highlightings/2',
+                           headers=[self.user1])
+        self.app.delete('/api/v1/highlightings/3',
+                           headers=[self.user2])
+
+        # check user1 doesn't have highlightings anymore
+        res = self.app.get('/api/v1/bookmarks/%r/highlightings' % bookmark_id_1,
+                           headers=[self.user1])
+        result = get_json(res)
+        self.assertEqual(HTTPStatus.OK, res.status_code)
+        self.assertEqual(result, [])
+
+        # check user2 has one highlighting
+        res = self.app.get('/api/v1/bookmarks/%r/highlightings' % bookmark_id_2,
+                           headers=[self.user2])
+        result = get_json(res)
+        self.assertEqual(HTTPStatus.OK, res.status_code)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['text'], 'Highlighting #2')
+
 
 if __name__ == '__main__':
     unittest.main()

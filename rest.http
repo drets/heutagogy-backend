@@ -68,11 +68,31 @@ Content-Type: application/json
 
 # Delete bookmark
 # Put ↓↓↓ article id to delete
-:id= ???
+:id= 1
 
 DELETE :url/bookmarks/:id
 Authorization: JWT :token
 
 # Get by url
 GET :url/bookmarks?url=https%3A%2F%2Fgithub.com
+Authorization: JWT :token
+
+# Get all highlightings for the bookmark
+GET :url/bookmarks/:id/highlightings
+Authorization: JWT :token
+
+# Save highlightings for the bookmark
+POST :url/bookmarks/:id/highlightings
+Authorization: JWT :token
+Content-Type: application/json
+
+[{
+  "text": "Highlighting #1"
+},
+{
+  "text": "Highlighting #2"
+}]
+
+# Delete highlighting by id
+DELETE :url/highlightings/:id
 Authorization: JWT :token
